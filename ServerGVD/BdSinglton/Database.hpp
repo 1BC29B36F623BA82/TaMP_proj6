@@ -3,69 +3,96 @@
 #include <fstream>
 #include <string>
 #include <mutex>
+#include <sstream>
 
 class Database {
 private:
     std::string db_filename;
-    std::mutex db_mutex; // Защита для потокобезопасности
+    std::mutex db_mutex;
 
-    // 1. Закрываем конструктор и деструктор
     Database() {
         db_filename = "database.txt";
-        std::cout << "[DB] База данных инициализирована. Файл: " << db_filename << std::endl;
+        std::cout << "[DB] Database initialized. File: " << db_filename << std::endl;
     }
     
     ~Database() {
-        std::cout << "[DB] Соединение с базой данных закрыто." << std::endl;
+        std::cout << "[DB] Database connection closed." << std::endl;
     }
 
-    // 2. Запрещаем копирование и присваивание
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;
 
+    // Временная заглушка для хэширования пароля (потом заменишь на свой алгоритм SHA-1)
+    std::string hashPassword(const std::string& password) {
+        // Простейшая симуляция хэша для тестов
+        return "HASH_" + password + "_SHA1";
+    }
+
 public:
-    // 3. Глобальная точка доступа (Синглтон Майерса)
     static Database& getInstance() {
         static Database instance;
         return instance;
     }
 
-    // Метод для сохранения пользователя и его RSA ключа
-    bool saveUser(const std::string& username, const std::string& rsaPublicKey) {
-        // Захватываем мьютекс, чтобы одновременно пишущие потоки сервера не сломали файл
-        std::lock_guard<std::mutex> lock(db_mutex);
-
-        // Открываем файл в режиме добавления (ios::app)
-        std::ofstream file(db_filename, std::ios::app);
-        if (!file.is_open()) {
-            std::cerr << "[DB Ошибка] Не удалось открыть файл базы данных!" << std::endl;
-            return false;
-        }
-
-        // Записываем данные в формате: имя:ключ
-        file << username << ":" << rsaPublicKey << "\n";
-        file.close();
-        
-        std::cout << "[DB] Пользователь " << username << " успешно сохранен." << std::endl;
-        return true;
-    }
-
-    // Метод для чтения ключа пользователя
-    std::string getUserKey(const std::string& username) {
+    // Проверка: существует ли уже пользователь с таким логином
+    bool userExists(const std::string& username) {
         std::lock_guard<std::mutex> lock(db_mutex);
         std::ifstream file(db_filename);
-        if (!file.is_open()) return "";
+        if (!file.is_open()) return false;
 
         std::string line;
         while (std::getline(file, line)) {
-            size_t delimiter = line.find(':');
-            if (delimiter != std::string::npos) {
-                std::string current_user = line.substr(0, delimiter);
-                if (current_user == username) {
-                    return line.substr(delimiter + 1); // Возвращаем ключ
+            size_t delim = line.find(':');
+            if (delim != std::string::npos) {
+                if (line.substr(0, delim) == username) {
+                    return true; 
                 }
             }
         }
-        return "Пользователь не найден";
+        return false;
+    }
+
+    // РЕГИСТРАЦИЯ: сохраняем имя, хэш пароля и открытый ключ RSA
+    bool registerUser(const std::string& username, const std::string& password, const std::string& rsaKey) {
+        if (userExists(username)) {
+            std::cout << "[DB] Registration failed: user " << username << " already exists." << std::endl;
+            return false;
+        }
+
+        std::lock_guard<std::mutex> lock(db_mutex);
+        std::ofstream file(db_filename, std::ios::app);
+        if (!file.is_open()) return false;
+
+        std::string passwordHash = hashPassword(password);
+
+        // Формат хранения: login:password_hash:rsa_public_key
+        file << username << ":" << passwordHash << ":" << rsaKey << "\n";
+        file.close();
+        
+        std::cout << "[DB] User " << username << " successfully registered." << std::endl;
+        return true;
+    }
+
+    // АВТОРИЗАЦИЯ: проверка логина и пароля
+    bool authenticateUser(const std::string& username, const std::string& password) {
+        std::lock_guard<std::mutex> lock(db_mutex);
+        std::ifstream file(db_filename);
+        if (!file.is_open()) return false;
+
+        std::string expectedHash = hashPassword(password);
+        std::string line;
+
+        while (std::getline(file, line)) {
+            std::stringstream ss(line);
+            std::string u, h, k;
+            if (std::getline(ss, u, ':') && std::getline(ss, h, ':') && std::getline(ss, k, ':')) {
+                if (u == username && h == expectedHash) {
+                    std::cout << "[DB] User " << username << " authenticated successfully." << std::endl;
+                    return true;
+                }
+            }
+        }
+        std::cout << "[DB] Authentication failed for user " << username << std::endl;
+        return false;
     }
 };
