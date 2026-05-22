@@ -40,9 +40,6 @@ jobs:
         with:
           ref: main
           path: ./TaMP_proj6-main
-      
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
 
       # Install Doxygen
       - name: Install Doxygen
