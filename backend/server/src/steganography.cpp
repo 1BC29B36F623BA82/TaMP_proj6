@@ -1,5 +1,5 @@
 #include "steganography.h"
-#include <openssl/sha.h>    // для SHA1
+#include "sha1.h"   
 #include <random>
 #include <cmath>
 #include <vector>
@@ -32,9 +32,7 @@ bool embed_message(std::vector<int16_t>& samples, const std::string& message, co
 
 std::string extract_message(const std::vector<int16_t>& samples, const std::string& original_message_for_hash) {
     // 1. Вычисляем SHA-1 от сообщения (или от пароля, который был использован при встраивании)
-    unsigned char hash[SHA_DIGEST_LENGTH];
-    SHA1(reinterpret_cast<const unsigned char*>(original_message_for_hash.c_str()), 
-         original_message_for_hash.size(), hash);
+    std::vector<unsigned char> hash = sha1(password);
     
     // 2. Инициализируем генератор случайных позиций тем же seed'ом
     std::seed_seq seed(hash, hash + SHA_DIGEST_LENGTH);
