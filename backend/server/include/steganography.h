@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <cstdint>
-#include "wav_handler.h"   
 
 // Функция внедрения сообщения в аудио-сэмплы
 // Возвращает true в случае успеха, false – если не хватило места или ошибка
