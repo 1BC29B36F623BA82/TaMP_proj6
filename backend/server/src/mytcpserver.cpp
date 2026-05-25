@@ -4,16 +4,12 @@
 #include <QCoreApplication>
 #include <QString>
 
-// Реализация функций (заглушек)
-
 QString fn_rsa_encrypt(const QString &payload) {
-    // payload = "e,n,текст"
     qDebug() << "[fn_rsa_encrypt] STUB called with:" << payload;
     return "RSA_ENC_ERR: Not implemented yet (stub)\r\n";
 }
 
 QString fn_rsa_decrypt(const QString &payload) {
-    // payload = "e,n,текст"
     qDebug() << "[fn_rsa_decrypt] STUB called with:" << payload;
     return "RSA_DEC_ERR: Not implemented yet (stub)\r\n";
 }
@@ -33,9 +29,10 @@ QString fn_steg(const QString &payload) {
     return "STEG_ERR: Not implemented yet (stub)\r\n";
 }
 
-// Реализация сервера 
-
 MyTcpServer::~MyTcpServer() {
+    for (QTcpSocket *client : mClients) {
+        client->disconnectFromHost();
+    }
     mTcpServer->close();
 }
 
@@ -44,25 +41,35 @@ MyTcpServer::MyTcpServer(QObject *parent) : QObject(parent) {
 
     connect(mTcpServer, &QTcpServer::newConnection,
             this, &MyTcpServer::slotNewConnection);
-    // порт....сервера.......
-    if(!mTcpServer->listen(QHostAddress::Any, 33333)){
+
+    if (!mTcpServer->listen(QHostAddress::Any, 33333)) {
         qDebug() << "Server is not started";
     } else {
-        qDebug() << "Server is started";
+        qDebug() << "Server is started on port 33333";
     }
 }
 
-void MyTcpServer::slotNewConnection(){
-    mTcpSocket = mTcpServer->nextPendingConnection();
-    mTcpSocket->write("Hello, World!!! I am echo + some more server!\r\n");
-    mTcpSocket->write("Напишите HELP для показа доступных команд.\r\n");
+void MyTcpServer::slotNewConnection() {
+    while (mTcpServer->hasPendingConnections()) {
+        QTcpSocket *clientSocket = mTcpServer->nextPendingConnection();
+        mClients.insert(clientSocket);
 
-    connect(mTcpSocket, &QTcpSocket::readyRead, this, &MyTcpServer::slotServerRead);
-    connect(mTcpSocket, &QTcpSocket::disconnected, this, &MyTcpServer::slotClientDisconnected);
+        qDebug() << "New client connected:" << clientSocket->peerAddress().toString()
+                 << ":" << clientSocket->peerPort()
+                 << "| Total clients:" << mClients.size();
+
+        clientSocket->write("Hello! I am echo + crypto server.\r\n");
+        clientSocket->write("Type HELP for available commands.\r\n");
+
+        connect(clientSocket, &QTcpSocket::readyRead,
+                this, &MyTcpServer::slotServerRead);
+        connect(clientSocket, &QTcpSocket::disconnected,
+                this, &MyTcpServer::slotClientDisconnected);
+    }
 }
 
 void MyTcpServer::slotServerRead() {
-    QTcpSocket* clientSocket = qobject_cast<QTcpSocket*>(sender());
+    QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
     if (!clientSocket) return;
 
     QByteArray rawData = clientSocket->readAll();
@@ -74,17 +81,19 @@ void MyTcpServer::slotServerRead() {
     QString request = QString::fromUtf8(rawData).trimmed();
     if (request.isEmpty()) return;
 
-    qDebug() << "Received request:" << request;
+    qDebug() << "From" << clientSocket->peerAddress().toString()
+             << ":" << clientSocket->peerPort()
+             << "| Request:" << request;
 
     QString response;
 
-    if (request.startsWith("RSA", Qt::CaseInsensitive)) {
+    if (request.startsWith("deRSA", Qt::CaseInsensitive)) {
+        QString payload = request.mid(6);
+        response = fn_rsa_decrypt(payload);
+    }
+    else if (request.startsWith("RSA", Qt::CaseInsensitive)) {
         QString payload = request.mid(4);
         response = fn_rsa_encrypt(payload);
-    }
-    else if (request.startsWith("deRSA", Qt::CaseInsensitive)) {
-        QString payload = request.mid(4);
-        response = fn_rsa_decrypt(payload);
     }
     else if (request.startsWith("SHA1", Qt::CaseInsensitive)) {
         QString payload = request.mid(5);
@@ -99,14 +108,23 @@ void MyTcpServer::slotServerRead() {
         response = fn_steg(payload);
     }
     else if (request.compare("HELP", Qt::CaseInsensitive) == 0) {
-        response = "Доступные команды: RSA, deRSA, SHA1, NEWTON, STEG\n\r";
+        response = "Available commands: RSA, deRSA, SHA1, NEWTON, STEG\r\n";
     }
     else {
-        response = "Эхо: " + request + "\r\n";
+        response = "Echo: " + request + "\r\n";
     }
+
     clientSocket->write(response.toUtf8());
 }
 
-void MyTcpServer::slotClientDisconnected(){
-    mTcpSocket->close();
+void MyTcpServer::slotClientDisconnected() {
+    QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
+    if (!clientSocket) return;
+
+    qDebug() << "Client disconnected:" << clientSocket->peerAddress().toString()
+             << ":" << clientSocket->peerPort()
+             << "| Remaining clients:" << (mClients.size() - 1);
+
+    mClients.remove(clientSocket);
+    clientSocket->deleteLater();
 }
