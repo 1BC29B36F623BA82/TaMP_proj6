@@ -6,6 +6,7 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+#include <cstdlib>
 
 // Вспомогательная функция: применяет метод Ньютона для поиска сэмпла с заданным LSB
 // Возвращает новое значение, максимально близкое к original, с младшим битом = target_bit
