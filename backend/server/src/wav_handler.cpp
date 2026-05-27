@@ -1,10 +1,31 @@
+/**
+ * @file wav_handler.cpp
+ * @brief Модуль чтения и записи WAV-файлов (формат PCM, 16 бит).
+ *
+ * Поддерживается только стандартный WAV-формат:
+ *   - RIFF-заголовок с подтипом WAVE
+ *   - Формат PCM (audioFormat = 1)
+ *   - 16 бит на сэмпл (bitsPerSample = 16)
+ */
+
 #include "wav_handler.h"
 #include <fstream>
 #include <iostream>
 #include <algorithm>
 #include <cstring>
 
-// Проверка корректности заголовка (PCM, 16 бит, непустой)
+/**
+ * @brief Проверка корректности WAV-заголовка.
+ *
+ * Проверяет:
+ *   - Сигнатуры RIFF, WAVE, fmt, data
+ *   - Формат PCM (audioFormat == 1)
+ *   - Глубину 16 бит (bitsPerSample == 16)
+ *   - Ненулевой размер данных
+ *
+ * @param header Заголовок WAV-файла
+ * @return true — заголовок корректен, false — файл не поддерживается
+ */
 bool is_valid_wav(const WavHeader& header) {
     // Проверка сигнатур
     if (std::memcmp(header.chunkID, "RIFF", 4) != 0) return false;
@@ -12,17 +33,23 @@ bool is_valid_wav(const WavHeader& header) {
     if (std::memcmp(header.subchunk1ID, "fmt ", 4) != 0) return false;
     if (std::memcmp(header.subchunk2ID, "data", 4) != 0) return false;
 
-    // Должен быть PCM
-    if (header.audioFormat != 1) return false;
-    // Поддерживаем только 16 бит на сэмпл
-    if (header.bitsPerSample != 16) return false;
-    // Размер данных не должен быть нулевым
-    if (header.subchunk2Size == 0) return false;
+    if (header.audioFormat != 1) return false;   // только PCM
+    if (header.bitsPerSample != 16) return false; // только 16 бит
+    if (header.subchunk2Size == 0) return false;  // данные не пусты
 
     return true;
 }
 
-// Чтение WAV-файла
+/**
+ * @brief Чтение WAV-файла в вектор 16-битных сэмплов.
+ *
+ * Считывает заголовок (44 байта), проверяет корректность,
+ * затем считывает PCM-данные в вектор int16_t.
+ *
+ * @param filename Путь к WAV-файлу
+ * @param header Ссылка на структуру заголовка (будет заполнена)
+ * @return Вектор сэмплов (пустой при ошибке)
+ */
 std::vector<int16_t> read_wav(const std::string& filename, WavHeader& header) {
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) {
@@ -30,24 +57,24 @@ std::vector<int16_t> read_wav(const std::string& filename, WavHeader& header) {
         return {};
     }
 
-    // Считываем заголовок
+    // Считываем 44-байтный заголовок
     file.read(reinterpret_cast<char*>(&header), sizeof(WavHeader));
     if (!file) {
         std::cerr << "Ошибка: не удалось прочитать заголовок WAV" << std::endl;
         return {};
     }
 
-    // Проверяем корректность
+    // Проверяем формат
     if (!is_valid_wav(header)) {
         std::cerr << "Ошибка: неподдерживаемый формат WAV (требуется PCM 16 бит)" << std::endl;
         return {};
     }
 
-    // Вычисляем количество сэмплов
+    // Вычисляем количество сэмплов: размер данных / 2 байта на сэмпл
     size_t numSamples = header.subchunk2Size / (header.bitsPerSample / 8);
     std::vector<int16_t> samples(numSamples);
 
-    // Читаем данные
+    // Считываем PCM-данные
     file.read(reinterpret_cast<char*>(samples.data()), header.subchunk2Size);
     if (!file && !file.eof()) {
         std::cerr << "Ошибка: не удалось прочитать аудиоданные" << std::endl;
@@ -57,24 +84,34 @@ std::vector<int16_t> read_wav(const std::string& filename, WavHeader& header) {
     return samples;
 }
 
-// Запись WAV-файла
+/**
+ * @brief Запись вектора сэмплов в WAV-файл.
+ *
+ * Копирует исходный заголовок, пересчитывает поля chunkSize и subchunk2Size
+ * под актуальный размер данных, затем записывает заголовок и сэмплы.
+ *
+ * @param filename Путь к выходному WAV-файлу
+ * @param samples Вектор 16-битных PCM-сэмплов
+ * @param original_header Исходный заголовок (частота, каналы и т.д.)
+ * @return true — запись успешна, false — ошибка
+ */
 bool write_wav(const std::string& filename, const std::vector<int16_t>& samples, const WavHeader& original_header) {
     if (samples.empty()) {
         std::cerr << "Ошибка: нет данных для записи" << std::endl;
         return false;
     }
 
-    // Создаём копию заголовка и корректируем поля под новые данные
+    // Копируем заголовок и пересчитываем размеры
     WavHeader header = original_header;
 
-    // Размер данных в байтах
+    // Размер PCM-данных в байтах
     uint32_t dataSize = static_cast<uint32_t>(samples.size() * sizeof(int16_t));
     header.subchunk2Size = dataSize;
 
-    // Общий размер файла: 36 + dataSize (стандартно для PCM)
+    // Общий размер файла: 36 (заголовок без RIFF ID и chunkSize) + dataSize
     header.chunkSize = 36 + dataSize;
 
-    // Убедимся, что остальные поля заголовка не противоречат данным
+    // Корректируем поля, если они были нулевыми
     if (header.bitsPerSample != 16) {
         std::cerr << "Предупреждение: bitsPerSample принудительно установлен в 16" << std::endl;
         header.bitsPerSample = 16;
@@ -93,14 +130,14 @@ bool write_wav(const std::string& filename, const std::vector<int16_t>& samples,
         return false;
     }
 
-    // Пишем заголовок
+    // Записываем заголовок (44 байта)
     file.write(reinterpret_cast<const char*>(&header), sizeof(WavHeader));
     if (!file) {
         std::cerr << "Ошибка: не удалось записать заголовок" << std::endl;
         return false;
     }
 
-    // Пишем сэмплы
+    // Записываем PCM-данные
     file.write(reinterpret_cast<const char*>(samples.data()), dataSize);
     if (!file) {
         std::cerr << "Ошибка: не удалось записать аудиоданные" << std::endl;
