@@ -1,0 +1,8 @@
+build/
+*.o
+*.exe
+moc_*
+ui_*.h
+.qmake.stash
+Makefile
+Makefile.*

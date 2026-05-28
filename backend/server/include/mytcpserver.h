@@ -7,8 +7,8 @@
 #include <QtNetwork>
 #include <QByteArray>
 #include <QDebug>
+#include <QSet>
 
-// заглушки для функций 
 QString fn_rsa_encrypt(const QString &payload);
 QString fn_rsa_decrypt(const QString &payload);
 QString fn_sha1(const QString &payload);
@@ -28,8 +28,8 @@ public slots:
     void slotServerRead();
 
 private:
-    QTcpServer * mTcpServer;
-    QTcpSocket * mTcpSocket;
+    QTcpServer *mTcpServer;
+    QSet<QTcpSocket*> mClients;
 };
 
 #endif // MYTCPSERVER_H
