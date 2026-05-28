@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QString>
 
+
 QString fn_rsa_encrypt(const QString &payload) {
     qDebug() << "[fn_rsa_encrypt] STUB called with:" << payload;
     return "RSA_ENC_ERR: Not implemented yet (stub)\r\n";
