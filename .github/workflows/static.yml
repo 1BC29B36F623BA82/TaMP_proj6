@@ -37,9 +37,8 @@ jobs:
       - name: Checkout source code (shsp branch)
         uses: actions/checkout@v5
         with:
-          # ИЗМЕНЕНО: качаем исходники из ветки shsp
           ref: shsp
-          path: ./TaMP_proj6-main
+          path: ./TaMP_proj6-shsp
 
       # Install Doxygen
       - name: Install Doxygen
