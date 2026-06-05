@@ -1,11 +1,10 @@
 # Simple workflow for deploying static content to GitHub Pages
 name: Deploy static content to Pages
 
-   
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: ["main", "docs"]
+    branches: ["shsp", "docs"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -35,10 +34,11 @@ jobs:
         with:
           path: ./docs
 
-      - name: Checkout source code (main branch)
+      - name: Checkout source code (shsp branch)
         uses: actions/checkout@v5
         with:
-          ref: main
+          # ИЗМЕНЕНО: качаем исходники из ветки shsp
+          ref: shsp
           path: ./TaMP_proj6-main
 
       # Install Doxygen
@@ -88,4 +88,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-
