@@ -5,8 +5,9 @@
 #include <vector>
 #include <string>
 #include <cstring>
-#include <algorithm>
 #include <cstdlib>
+
+static const std::string g_wav_dir = "../../src/wav/";
 
 /**
  * @brief Метод Ньютона для нахождения ближайшего целого с заданным LSB.
@@ -35,6 +36,7 @@
  * @param target_bit Требуемый младший бит (0 или 1)
  * @return Ближайшее целое с заданным LSB
  */
+
 static int16_t apply_newton_lsb(int16_t original, int target_bit) {
     // Если младший бит уже совпадает — модификация не нужна
     if ((original & 1) == target_bit) {

@@ -4,21 +4,27 @@ QT += network core
 CONFIG += c++17 console
 CONFIG -= app_bundle
 
-# Указываем qmake, где искать хедеры, чтобы не писать в include "include/mytcpserver.h"
+# Хедеры ищутся прямо в include/, без полного пути
 INCLUDEPATH += include
 
-# Пути к исходникам
+# Исходники
 SOURCES += \
     main.cpp \
-    src/mytcpserver.cpp
+    src/mytcpserver.cpp \
+    src/rsa.cpp \
+    src/sha1.cpp \
+    src/steganography.cpp \
+    src/wav_handler.cpp
 
-# Пути к хедерам
+# Хедеры
 HEADERS += \
     include/mytcpserver.h \
-    include/newton.h \
-    include/steg.h
+    include/rsa.h \
+    include/sha1.h \
+    include/steganography.h \
+    include/wav_handler.h
 
-# Базовые правила деплоя (оставляем стандартные)
+# Стандартные правила деплоя
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
