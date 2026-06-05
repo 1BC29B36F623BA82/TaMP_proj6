@@ -6,7 +6,7 @@ PROJECT_BRIEF          = "Стеганография и криптография
 OUTPUT_DIRECTORY       = build
 
 # --- Откуда брать исходный код ---
-INPUT                  = ../TaMP_proj6-main/
+INPUT                  = ../TaMP_proj6-shsp/
 RECURSIVE              = YES
 EXCLUDE                = .git/ build/ docs/ .github/
 
