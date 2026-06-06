@@ -4,6 +4,7 @@ name: Deploy static content to Pages
 on:
   # Runs on pushes targeting the default branch
   push:
+    # ИЗМЕНЕНО: теперь триггерится при пуше в shsp или docs
     branches: ["shsp", "docs"]
 
   # Allows you to run this workflow manually from the Actions tab
@@ -37,8 +38,9 @@ jobs:
       - name: Checkout source code (shsp branch)
         uses: actions/checkout@v5
         with:
-          ref: main
-          path: ./TaMP_proj6-shsp
+          # ИЗМЕНЕНО: качаем исходники из ветки shsp
+          ref: shsp
+          path: ./TaMP_proj6-main
 
       # Install Doxygen
       - name: Install Doxygen
@@ -52,7 +54,14 @@ jobs:
       - name: Configure Doxyfile
         run: |
            cd ./docs
-
+           # Check if the INPUT line exists in Doxyfile
+           if grep -q "^INPUT\s*=" Doxyfile; then
+              # If it exists, replace it with "INPUT = ../TaMP_proj6-main"
+              sed -i 's|^INPUT\s*=.*|INPUT = ../TaMP_proj6-main|' Doxyfile
+           else
+              # If not, append the line to the file
+              echo "INPUT = ../TaMP_proj6-main" >> Doxyfile
+           fi
 
            # Similarly for RECURSIVE
            if grep -q "^RECURSIVE\s*=" Doxyfile; then
