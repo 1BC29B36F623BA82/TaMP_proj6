@@ -1,6 +1,6 @@
 #ifndef MYTCPSERVER_H
 #define MYTCPSERVER_H
- 
+
 #include <QObject>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -9,6 +9,7 @@
 #include <QDebug>
 #include <QSet>
 
+// Обработчики команд протокола
 QString fn_rsa_encrypt(const QString &payload);
 QString fn_rsa_decrypt(const QString &payload);
 QString fn_sha1(const QString &payload);
