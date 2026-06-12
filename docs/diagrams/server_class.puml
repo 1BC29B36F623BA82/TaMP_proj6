@@ -1,0 +1,81 @@
+@startuml server_class
+!pragma layout smetana
+title Диаграмма классов — Сервер (backend/server)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+class QObject
+
+class MyTcpServer {
+  - mTcpServer : QTcpServer*
+  - mClients : QSet<QTcpSocket*>
+  + MyTcpServer(parent : QObject*)
+  + ~MyTcpServer()
+  + slotNewConnection() : void
+  + slotClientDisconnected() : void
+  + slotServerRead() : void
+}
+
+QObject <|-- MyTcpServer
+
+class QTcpServer
+class QTcpSocket
+MyTcpServer "1" o-- "1" QTcpServer : mTcpServer
+MyTcpServer "1" o-- "0..*" QTcpSocket : mClients
+
+class "Command Handlers" as Handlers <<functions>> {
+  + fn_rsa_encrypt(payload : QString) : QString
+  + fn_rsa_decrypt(payload : QString) : QString
+  + fn_sha1(payload : QString) : QString
+  + fn_newton(payload : QString) : QString
+  + fn_steg(payload : QString) : QString
+}
+MyTcpServer ..> Handlers : вызывает в slotServerRead()
+
+class "rsa" as RSA <<module>> {
+  + generate_keys(p, q) : RSAKeyPair
+  + rsa_encrypt(text, e, n) : vector<uint64_t>
+  + rsa_decrypt(cipher, d, n) : string
+  + serialize_ciphertext(c) : string
+  + deserialize_ciphertext(s) : vector<uint64_t>
+}
+class RSAKeyPair <<struct>> {
+  + n : uint64_t
+  + e : uint64_t
+  + d : uint64_t
+}
+RSA ..> RSAKeyPair
+
+class "sha1" as SHA1 <<module>> {
+  + sha1(data, len) : vector<unsigned char>
+  + sha1(str) : vector<unsigned char>
+}
+
+class "steganography" as STEG <<module>> {
+  + embed_message(samples, message, password) : bool
+  + extract_message(samples, password) : string
+  - apply_newton_lsb(original, target_bit) : int16_t
+}
+
+class "wav_handler" as WAV <<module>> {
+  + read_wav(filename, header) : vector<int16_t>
+  + write_wav(filename, samples, header) : bool
+  + is_valid_wav(header) : bool
+}
+class WavHeader <<struct>> {
+  + chunkID[4], format[4]
+  + audioFormat, numChannels
+  + sampleRate, bitsPerSample
+  + subchunk2Size : uint32_t
+}
+WAV ..> WavHeader
+
+Handlers ..> RSA
+Handlers ..> SHA1
+Handlers ..> STEG
+Handlers ..> WAV
+STEG ..> SHA1 : seed = SHA-1(password)
+STEG ..> RSA : cipher (de)serialization
+
+@enduml

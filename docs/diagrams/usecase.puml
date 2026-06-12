@@ -1,0 +1,48 @@
+@startuml usecase
+!pragma layout smetana
+title Use-Case диаграмма — Стеганография в WAV (RSA + SHA-1 + метод Ньютона)
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Пользователь" as User
+actor "TCP-сервер" as Server <<system>>
+
+rectangle "Клиент-серверное приложение" {
+  usecase "Подключиться к серверу" as UC_Conn
+  usecase "Отключиться" as UC_Disc
+  usecase "Отправить команду" as UC_Send
+  usecase "Просмотреть ответ/лог" as UC_Log
+
+  usecase "Захэшировать текст (SHA-1)" as UC_Sha
+  usecase "Зашифровать текст (RSA)" as UC_Enc
+  usecase "Расшифровать блоки (deRSA)" as UC_Dec
+  usecase "Подобрать LSB (метод Ньютона)" as UC_Newton
+  usecase "Встроить сообщение в WAV (STEG embed)" as UC_Embed
+  usecase "Извлечь сообщение из WAV (STEG extract)" as UC_Extract
+}
+
+User --> UC_Conn
+User --> UC_Disc
+User --> UC_Send
+User --> UC_Log
+
+UC_Send ..> UC_Sha : <<include>>
+UC_Send ..> UC_Enc : <<include>>
+UC_Send ..> UC_Dec : <<include>>
+UC_Send ..> UC_Newton : <<include>>
+UC_Send ..> UC_Embed : <<include>>
+UC_Send ..> UC_Extract : <<include>>
+
+UC_Embed ..> UC_Enc : <<include>>
+UC_Embed ..> UC_Newton : <<include>>
+UC_Extract ..> UC_Dec : <<include>>
+
+UC_Sha --> Server
+UC_Enc --> Server
+UC_Dec --> Server
+UC_Newton --> Server
+UC_Embed --> Server
+UC_Extract --> Server
+
+@enduml
