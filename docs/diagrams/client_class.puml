@@ -1,0 +1,48 @@
+@startuml client_class
+!pragma layout smetana
+title Диаграмма классов — Клиент (frontend/client)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+class QMainWindow
+class QTcpSocket
+
+class MainWindow {
+  - ui : Ui::MainWindow*
+  - mSocket : QTcpSocket*
+  + MainWindow(parent : QWidget*)
+  + ~MainWindow()
+  - onConnectClicked() : void
+  - onDisconnectClicked() : void
+  - onSendClicked() : void
+  - onConnected() : void
+  - onDisconnected() : void
+  - onReadyRead() : void
+  - onError(e : QAbstractSocket::SocketError) : void
+  - setConnectedState(connected : bool) : void
+}
+
+class "Ui::MainWindow" as Ui <<form>> {
+  + lineHost : QLineEdit*
+  + spinPort : QSpinBox*
+  + lineCommand : QLineEdit*
+  + textLog : QTextEdit*
+  + btnConnect : QPushButton*
+  + btnDisconnect : QPushButton*
+  + btnSend : QPushButton*
+  + statusbar : QStatusBar*
+}
+
+QMainWindow <|-- MainWindow
+MainWindow "1" o-- "1" Ui : ui
+MainWindow "1" o-- "1" QTcpSocket : mSocket
+
+note bottom of MainWindow
+  Обмен с сервером по TCP (порт 33333):
+  команды HELP / SHA1 / RSA / deRSA /
+  NEWTON / STEG отправляются текстом,
+  ответ выводится в textLog.
+end note
+
+@enduml
