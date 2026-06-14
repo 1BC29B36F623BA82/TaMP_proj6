@@ -6,10 +6,13 @@
  *   RSA    <текст>           — RSA-шифрование (побайтово, ключи p=61 q=53)
  *   deRSA  <hex-данные>      — RSA-расшифрование
  *   SHA1   <текст>           — SHA-1 хэш в hex
- *   STEG   <текст> <файл>    — встроить сообщение в WAV (стеганография)
- *   deSTEG <файл>            — извлечь сообщение из WAV
+ *   STEG   <текст> <файл>    — встроить сообщение в WAV (стеганография) [ADMIN]
+ *   deSTEG <файл>            — извлечь сообщение из WAV [ADMIN]
+ *   WHOAMI                   — имя и роль текущего пользователя
+ *   HISTORY [N]              — последние N команд сессии (по умолчанию 10)
  *   HELP                     — список команд
  */
+
 
 #ifndef MYTCPSERVER_H
 #define MYTCPSERVER_H
@@ -21,23 +24,31 @@
 #include <QByteArray>
 #include <QDebug>
 #include <QMap>
+#include <QList>
 
 /**
- * @brief Роли подключенных пользователей
+ * @brief Роли подключённых пользователей.
  */
 enum class AppRole {
-    Guest,  ///< Неавторизованный (может только зарегистрироваться/войти)
-    Client, ///< Обычный пользователь (RSA, SHA1)
-    Server  ///< Админ (deRSA, STEG, deSTEG, KICK, BAN, LIST)};
+    Guest,  ///< Неавторизованный — только REGISTER/LOGIN
+    Client, ///< Обычный пользователь — RSA, SHA1, WHOAMI, HISTORY
+    Server  ///< Администратор — все команды + STEG, KICK, BAN, LIST
 };
-
+ 
 /**
- * @brief Структура для хранения информации о текущем подключении
+ * @brief Контекст одного подключения: роль, имя, история команд.
+ *
+ * История хранит не более MAX_HISTORY последних команд сессии.
+ * Команды WHOAMI и HISTORY в историю не записываются.
  */
 struct ClientContext {
-    AppRole role = AppRole::Guest;
-    QString username = "Anonymous";
+    AppRole      role     = AppRole::Guest;     ///< Роль пользователя
+    QString      username = "Anonymous";         ///< Логин (после LOGIN)
+    QList<QString> history;                      ///< История команд текущей сессии
+ 
+    static constexpr int MAX_HISTORY = 20;       ///< Максимальный размер истории
 };
+
 
 /**
  * @brief RSA-шифрование строки.
